@@ -27,6 +27,39 @@ router.get("/", async (req, res) => {
 
   await page.goto(url, { waitUntil: "networkidle2" });
 
+  function extractImgLinks() {
+    const extractedElements = document.querySelectorAll("a img");
+    const items = [];
+    extractedElements.forEach((element) => {
+      items.push(element.src);
+    });
+    return items;
+  }
+
+  async function scrollToEndOfPage(page, extractImgLinks = () => {}) {
+    let items = [];
+    try {
+      let previousHeight;
+      while (true) {
+        const curHeight = await page.evaluate("document.body.scrollHeight");
+        if (previousHeight === curHeight) {
+          break;
+        }
+        previousHeight = curHeight;
+        await page.evaluate("window.scrollTo(0, document.body.scrollHeight)");
+        await page.waitForFunction(
+          `document.body.scrollHeight > ${previousHeight}`
+        );
+        await page.waitFor(3500);
+        const links = await page.evaluate(extractImgLinks).catch((err) => {
+          console.log(err);
+          return [];
+        });
+        items = [...items, ...links];
+      }
+    } catch (e) {}
+    return items;
+  }
   // const content = await page.content();
 
   // const $ = cheerio.load(content);
