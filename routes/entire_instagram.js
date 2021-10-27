@@ -1,8 +1,8 @@
 import express from "express";
 import puppeteer from "puppeteer";
 import cheerio from "cheerio";
-import infiniteScroll from "../lib/infinite_scroll";
-import loginInstagram from "../lib/login_instagram";
+import infiniteScroll from "../lib/infinite_scroll.js";
+import loginInstagram from "../lib/login_instagram.js";
 
 const router = express.Router();
 
@@ -25,18 +25,9 @@ router.get("/", async (req, res) => {
 
   await loginInstagram(page);
 
-  await page.goto(url, { waitUntil: "networkidle2" });
+  await page.goto(url, { waitUntil: "networkidle2" }, { timeout: 0 });
 
-  function extractImgLinks() {
-    const extractedElements = document.querySelectorAll("a img");
-    const items = [];
-    extractedElements.forEach((element) => {
-      items.push(element.src);
-    });
-    return items;
-  }
-
-  async function scrollToEndOfPage(page, extractImgLinks = () => {}) {
+  async function scrollToEndOfPage(page) {
     let items = [];
     try {
       let previousHeight;
@@ -50,26 +41,41 @@ router.get("/", async (req, res) => {
         await page.waitForFunction(
           `document.body.scrollHeight > ${previousHeight}`
         );
-        await page.waitFor(3500);
-        const links = await page.evaluate(extractImgLinks).catch((err) => {
-          console.log(err);
-          return [];
+        await page.waitForTimeout(3500);
+        const content = await page.content();
+        const $ = cheerio.load(content);
+        $("div.v1Nh3.kIKUG._bz0w").each((index, element) => {
+          const id = $(element).children("a").attr("href");
+          const imgSrc = $(element)
+            .children("a")
+            .children("div")
+            .children("div")
+            .children("img")
+            .attr("src");
+          if (
+            !items.find((i) => {
+              return i.id === id;
+            })
+          ) {
+            items.push({ id, imgSrc });
+          }
         });
-        items = [...items, ...links];
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error(e);
+    }
     return items;
   }
+  const a = await scrollToEndOfPage(page);
+  await browser.close();
+
+  console.log(a.length);
+
   // const content = await page.content();
 
   // const $ = cheerio.load(content);
 
   // const postList: string[] = [];
-
-  // $("div.v1Nh3.kIKUG._bz0w").each((index, element) => {
-  //   const postId = $(element).children("a").attr("href");
-  //   postList.push(postId!);
-  // });
 
   // await browser.close();
   // console.log(postList);

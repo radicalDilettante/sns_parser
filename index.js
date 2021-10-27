@@ -1,5 +1,5 @@
 import express from "express";
-import scraperRouter from "./routes/entire_instagram";
+import scraperRouter from "./routes/entire_instagram.js";
 import dotenv from "dotenv";
 
 dotenv.config();
