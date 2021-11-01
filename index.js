@@ -16,9 +16,7 @@ const server = async () => {
 
     app.use("/scraper", scraperRouter);
 
-    app.listen(3000, () => {
-      console.log("Server listening on port 3000");
-    });
+    app.listen(3000, () => console.log("Server listening on port 3000"));
   } catch (err) {
     console.log(err);
   }
